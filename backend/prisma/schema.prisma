@@ -1,0 +1,145 @@
+// Prisma Schema for Scrap Market Application
+// Run `npx prisma generate` after editing this file, then
+// `npx prisma migrate dev --name init` to create the database tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum MaterialType {
+  METAL
+  PLASTIC
+  ELECTRONICS
+  PAPER
+  OTHER
+}
+
+enum PricingType {
+  FIXED
+  BID
+}
+
+enum ListingStatus {
+  ACTIVE
+  PENDING
+  SOLD
+  REMOVED
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum TransactionStatus {
+  CONFIRMED
+  PICKED_UP
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(SELLER)
+  phone        String?
+  address      String?
+  lat          Float?
+  lng          Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  listings     Listing[]      @relation("SellerListings")
+  bids         Bid[]
+  buyerTx      Transaction[]  @relation("BuyerTransactions")
+  sellerTx     Transaction[]  @relation("SellerTransactions")
+
+  @@map("users")
+}
+
+model Listing {
+  id                String        @id @default(uuid())
+  sellerId          String
+  seller            User          @relation("SellerListings", fields: [sellerId], references: [id])
+  title             String
+  description       String?
+  materialType      MaterialType
+  subtype           String?
+  estimatedWeightKg Float
+  pricePerKg        Float?
+  pricingType       PricingType
+  photos            Json?
+  status            ListingStatus @default(ACTIVE)
+  address           String?
+  lat               Float?
+  lng               Float?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  bids         Bid[]
+  transactions Transaction[]
+
+  @@map("listings")
+}
+
+model Bid {
+  id              String    @id @default(uuid())
+  listingId       String
+  listing         Listing   @relation(fields: [listingId], references: [id])
+  buyerId         String
+  buyer           User      @relation(fields: [buyerId], references: [id])
+  offerPricePerKg Float
+  status          BidStatus @default(PENDING)
+  createdAt       DateTime  @default(now())
+
+  @@map("bids")
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  listingId       String
+  listing         Listing           @relation(fields: [listingId], references: [id])
+  buyerId         String
+  buyer           User              @relation("BuyerTransactions", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User              @relation("SellerTransactions", fields: [sellerId], references: [id])
+  finalPricePerKg Float
+  totalAmount     Float
+  status          TransactionStatus @default(CONFIRMED)
+  createdAt       DateTime          @default(now())
+
+  pickup Pickup?
+
+  @@map("transactions")
+}
+
+model Pickup {
+  id            String   @id @default(uuid())
+  transactionId String   @unique
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  scheduledDate DateTime
+  timeSlot      String?
+  pickupType    String   // "pickup" | "drop_off"
+  address       String?
+  lat           Float?
+  lng           Float?
+  status        String   @default("scheduled")
+  notes         String?
+
+  @@map("pickups")
+}
