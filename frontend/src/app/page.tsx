@@ -14,7 +14,7 @@ const MATERIAL_ICONS: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const materials = [
     { key: 'METAL', label: t('material_metal') },
@@ -54,7 +54,7 @@ export default function HomePage() {
     },
   ];
 
-  const { lang } = useLanguage();
+ const { t, lang } = useLanguage();
 
   return (
     <>
